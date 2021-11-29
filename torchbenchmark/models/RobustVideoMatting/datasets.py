@@ -70,7 +70,13 @@ def init_datasets(args, rank, world_size):
         shuffle=True)
     dataloader_lr_train = DataLoader(
         dataset=dataset_lr_train,
-        batch_size=args.batch_size_per_gpu,
+        batch_size=args.train_batch_size,
+        num_workers=args.num_workers,
+        sampler=datasampler_lr_train,
+        pin_memory=True)
+    dataloader_lr_eval = DataLoader(
+        dataset=dataset_lr_train,
+        batch_size=args.eval_batch_size,
         num_workers=args.num_workers,
         sampler=datasampler_lr_train,
         pin_memory=True)
@@ -88,7 +94,7 @@ def init_datasets(args, rank, world_size):
     #         pin_memory=True)
     dataloader_valid = DataLoader(
         dataset=dataset_valid,
-        batch_size=args.batch_size_per_gpu,
+        batch_size=args.train_batch_size,
         num_workers=args.num_workers,
         pin_memory=True)
     
@@ -128,8 +134,8 @@ def init_datasets(args, rank, world_size):
         shuffle=True)
     dataloader_seg_video = DataLoader(
         dataset=dataset_seg_video,
-        batch_size=args.batch_size_per_gpu,
+        batch_size=args.train_batch_size,
         num_workers=args.num_workers,
         sampler=datasampler_seg_video,
         pin_memory=True)
-    return dataloader_lr_train, dataloader_valid, dataloader_seg_video
+    return dataloader_lr_train, dataloader_valid, dataloader_seg_video, dataloader_lr_eval

@@ -1,3 +1,7 @@
+"""
+Benchmarking code for model RobustVideoMatting (https://github.com/PeterL1n/RobustVideoMatting/tree/aff79bfdc056daf478bd395a838d37c5d715a7e2)
+The original model trains in 4 stages, and we only run the first stage for benchmarking
+"""
 import torch
 from torch.utils.data import DataLoader
 
@@ -32,7 +36,8 @@ class Model(BenchmarkModel):
         self.model_ddp, self.optimizer, self.scaler = init_model(args)
     
         # init input data
-        self.dataloader_lr_train, self.dataloader_seg_video = init_datasets(rank=0, world_size=1)
+        self.dataloader_lr_train, self.dataloader_valid, self.dataloader_seg_video, \
+            self.dataloader_lr_eval = init_datasets(rank=0, world_size=1)
 
         # Only run 1 batch of data for train and eval
         self.train_num_batch = 1
@@ -40,7 +45,6 @@ class Model(BenchmarkModel):
 
     def get_module(self):
         return self.model, self.example_inputs
-
 
     def train(self, niter=1):
         if not self.device == "cuda":
@@ -82,7 +86,7 @@ class Model(BenchmarkModel):
         self.eval_model.eval()
         with torch.no_grad():
             for epoch in range(niter):
-                for _, src in zip(range(self.eval_num_batch), reader):
+                for _, src in zip(range(self.eval_num_batch), self.dataloader_lr_eval):
                     if downsample_ratio is None:
                         downsample_ratio = auto_downsample_ratio(*src.shape[2:])
                     # src = src.to(device, dtype, non_blocking=True).unsqueeze(0) # [B, T, C, H, W]
