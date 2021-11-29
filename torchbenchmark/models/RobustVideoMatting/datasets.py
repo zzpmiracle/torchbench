@@ -1,4 +1,4 @@
-from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from .RobustVideoMatting.dataset.augmentation import (
     TrainFrameSampler,
@@ -11,10 +11,8 @@ from .RobustVideoMatting.dataset.videomatte import (
 from .RobustVideoMatting.dataset.youtubevis import (
     YouTubeVISAugmentation
 )
-from .RobustVideoMatting.dataset.imagematte import (
-    ImageMatteDataset,
-    ImageMatteAugmentation
-)
+from .mock_videomatte import MockVideoMatteDataset
+from .mock_youtubevis import MockYouTubeVISDataset
 
 # We only support the first epoch of training
 # Therefore, we only support mock LR VideoMatte and YouTubeVIS dataset
