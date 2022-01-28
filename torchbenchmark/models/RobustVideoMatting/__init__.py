@@ -27,7 +27,7 @@ class Model(BenchmarkModel):
         self.device = device
         self.jit = jit
         if not device == "cuda":
-            raise NotImplementedError("This model only supports GPU")
+            raise NotImplementedError("This model only supports CUDA")
         # We only run train stage 1 for benchmarking
         # See full stage configs in args.py
         args = stage1_args()
