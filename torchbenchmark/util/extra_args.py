@@ -130,17 +130,7 @@ def apply_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argp
                                        is_hf_model=is_hf_model(model), hf_max_length=get_hf_maxlength(model)))
     if args.torch_trt:
         module, exmaple_inputs = model.get_module()
-<<<<<<< HEAD
         precision = 'fp16' if not model.dargs.precision == "fp32" else 'fp32'
         model.set_module(enable_torchtrt(precision=precision, model=module, example_inputs=exmaple_inputs))
-=======
-<<<<<<< HEAD
-        precision = 'fp16' if args.fp16 else 'fp32'
-        model.set_module(enable_torchtrt(precision=precision, model=module, example_inputs=exmaple_inputs))
-
-=======
-        model.set_module(enable_torchtrt(precision='fp32', model=module, example_inputs=exmaple_inputs))
     if args.flops:
         enable_flops(model)
->>>>>>> f87426f9 (Fixed flops counting for torchvision.)
->>>>>>> 0886a8b (Fixed flops counting for torchvision.)
