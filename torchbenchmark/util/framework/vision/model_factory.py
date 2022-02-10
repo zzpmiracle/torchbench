@@ -31,6 +31,9 @@ class TorchVisionModel(BenchmarkModel):
         elif test == "eval":
             self.model.eval()
 
+        self.real_input = [ torch.rand_like(self.example_inputs[0]) ]
+        self.real_output = [ torch.rand_like(self.example_outputs) ]
+
     # By default, FlopCountAnalysis count one fused-mult-add (FMA) as one flop.
     # However, in our context, we count 1 FMA as 2 flops instead of 1.
     # https://github.com/facebookresearch/fvcore/blob/7a0ef0c0839fa0f5e24d2ef7f5d48712f36e7cd7/fvcore/nn/flop_count.py
@@ -62,11 +65,9 @@ class TorchVisionModel(BenchmarkModel):
         return self.model, self.example_inputs
 
     def train(self, niter=3):
-        real_input = [ torch.rand_like(self.example_inputs[0]) ]
-        real_output = [ torch.rand_like(self.example_outputs) ]
         for _ in range(niter):
             self.optimizer.zero_grad()
-            for data, target in zip(real_input, real_output):
+            for data, target in zip(self.real_input, self.real_output):
                 if not self.dynamo and self.opt_args.cudagraph:
                     self.example_inputs[0].copy_(data)
                     self.example_outputs.copy_(target)
