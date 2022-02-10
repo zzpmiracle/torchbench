@@ -208,7 +208,6 @@ if __name__ == "__main__":
             from components.model_analyzer.TorchBenchAnalyzer import check_dcgm
             if check_dcgm():
                 model_flops = 'dcgm'
-            
     if args.profile:
         profile_one_step(test)
     elif args.cudastreams:

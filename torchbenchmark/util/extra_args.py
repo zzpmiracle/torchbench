@@ -11,6 +11,7 @@ def enable_opt_args(opt_args: argparse.Namespace) -> bool:
         if opt_args_dict[k]:
             return True
     return False
+from torchbenchmark.util.backends.flops import enable_flops
 
 def add_bool_arg(parser: argparse.ArgumentParser, name: str, default_value: bool=True):
     group = parser.add_mutually_exclusive_group(required=False)
@@ -85,9 +86,11 @@ def apply_decoration_args(model: 'torchbenchmark.util.model.BenchmarkModel', dar
     elif not dargs.precision == "fp32":
         assert False, f"Get an invalid precision option: {dargs.precision}. Please report a bug."
 
+
 # Dispatch arguments based on model type
 def parse_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', opt_args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--flops", action='store_true', help="enable flops counting")
     parser.add_argument("--fx2trt", action='store_true', help="enable fx2trt")
     parser.add_argument("--fuser", type=str, default="", choices=["fuser0", "fuser1", "fuser2"], help="enable fuser")
     parser.add_argument("--torch_trt", action='store_true', help="enable torch_tensorrt")
@@ -101,6 +104,9 @@ def parse_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', opt_args: 
             raise NotImplementedError("TensorRT only works for CUDA inference tests.")
     if is_torchvision_model(model):
         args.cudagraph = False
+    elif args.flops:
+        args.flops = False
+        raise NotImplementedError("Flops is only enabled for TorchVision models")
     return args
 
 def apply_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argparse.Namespace):
@@ -124,5 +130,17 @@ def apply_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argp
                                        is_hf_model=is_hf_model(model), hf_max_length=get_hf_maxlength(model)))
     if args.torch_trt:
         module, exmaple_inputs = model.get_module()
+<<<<<<< HEAD
         precision = 'fp16' if not model.dargs.precision == "fp32" else 'fp32'
         model.set_module(enable_torchtrt(precision=precision, model=module, example_inputs=exmaple_inputs))
+=======
+<<<<<<< HEAD
+        precision = 'fp16' if args.fp16 else 'fp32'
+        model.set_module(enable_torchtrt(precision=precision, model=module, example_inputs=exmaple_inputs))
+
+=======
+        model.set_module(enable_torchtrt(precision='fp32', model=module, example_inputs=exmaple_inputs))
+    if args.flops:
+        enable_flops(model)
+>>>>>>> f87426f9 (Fixed flops counting for torchvision.)
+>>>>>>> 0886a8b (Fixed flops counting for torchvision.)
