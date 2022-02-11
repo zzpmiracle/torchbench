@@ -104,9 +104,12 @@ def parse_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', opt_args: 
             raise NotImplementedError("TensorRT only works for CUDA inference tests.")
     if is_torchvision_model(model):
         args.cudagraph = False
+        if model.test == "train" and args.flops:
+            args.flops = False
+            raise NotImplementedError("Flops is only enabled for TorchVision model inference tests")
     elif args.flops:
         args.flops = False
-        raise NotImplementedError("Flops is only enabled for TorchVision models")
+        raise NotImplementedError("Flops is only enabled for TorchVision model inference tests")
     return args
 
 def apply_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argparse.Namespace):
