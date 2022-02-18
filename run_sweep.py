@@ -12,14 +12,15 @@ import time
 import pathlib
 import dataclasses
 import itertools
-from typing import List, Optional
+import torch
+from typing import List, Optional, Dict, Any, Tuple
 from torchbenchmark import ModelTask
 
 WARMUP_ROUNDS = 3
 MODEL_DIR = ['torchbenchmark', 'models']
 NANOSECONDS_PER_MILLISECONDS = 1_000_000.0
 
-def run_one_step(func, device: str, nwarmup=WARMUP_ROUNDS, num_iter=10) -> float:
+def run_one_step(func, device: str, nwarmup=WARMUP_ROUNDS, num_iter=10) -> Tuple[float, Optional[Tuple[torch.Tensor]]]:
     "Run one step of the model, and return the latency in milliseconds."
     # Warm-up `nwarmup` rounds
     for _i in range(nwarmup):
@@ -50,8 +51,7 @@ class ModelTestResult:
     extra_args: List[str]
     status: str
     batch_size: Optional[int]
-    latency_ms: Optional[float]
-    error_message: Optional[str]
+    results: Dict[str, Any]
 
 def _list_model_paths(models: List[str]) -> List[str]:
     p = pathlib.Path(__file__).parent.joinpath(*MODEL_DIR)
@@ -80,16 +80,16 @@ def _validate_devices(devices: str) -> List[str]:
 def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool, batch_size: Optional[int], extra_args: List[str]) -> ModelTestResult:
     assert test == "train" or test == "eval", f"Test must be either 'train' or 'eval', but get {test}."
     result = ModelTestResult(name=model_path.name, test=test, device=device, extra_args=extra_args, batch_size=None,
-                             status="OK", latency_ms=None, error_message=None)
+                             status="OK", results={})
     # Run the benchmark test in a separate process
     print(f"Running model {model_path.name} ... ", end='', flush=True)
     status: str = "OK"
     bs_name = "batch_size"
+    eager_eval_result_name = "eager_eval_result"
     error_message: Optional[str] = None
     try:
         task = ModelTask(os.path.basename(model_path))
         if not task.model_details.exists:
-            result.latency_ms = None
             status = "NotExist"
             return
         task.make_model_instance(test=test, device=device, jit=jit, batch_size=batch_size, extra_args=extra_args)
@@ -98,7 +98,11 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
         if batch_size and (not result.batch_size == batch_size):
             raise ValueError(f"User specify batch size {batch_size}, but model {result.name} runs with batch size {result.batch_size}. Please report a bug.")
         func = getattr(task, test)
-        result.latency_ms = run_one_step(func, device)
+        (result.results["latency_ms"], test_result) = run_one_step(func, device)
+        # if the model provides eager eval result, save it for cosine similarity
+        eager_eval_result = task.get_model_attribute(eager_eval_result_name)
+        if eager_eval_result:
+            result.results["cos_sim"] = get_cosine_similarity(eager_eval_result, test_result)
     except NotImplementedError as e:
         status = "NotImplemented"
         error_message = str(e)
@@ -114,7 +118,8 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
     finally:
         print(f"[ {status} ]")
         result.status = status
-        result.error_message = error_message
+        if error_message:
+            result.results["error_message"] = error_message
         if status == "UserInterrupted":
             sys.exit(1)
         return result
