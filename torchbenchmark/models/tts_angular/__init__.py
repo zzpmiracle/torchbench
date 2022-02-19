@@ -38,4 +38,4 @@ class Model(BenchmarkModel):
             raise NotImplementedError()
         for _ in range(niter):
             out = self.model.eval()
-        return out
+        return (out, )
