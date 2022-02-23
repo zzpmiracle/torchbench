@@ -1,8 +1,10 @@
 import argparse
 from typing import List
-from torchbenchmark.util.backends.fx2trt import enable_fx2trt
 from torchbenchmark.util.backends.fuser import enable_fuser
+from torchbenchmark.util.backends.fx2trt import enable_fx2trt
+from torchbenchmark.util.backends.torch2trt import enable_torch2trt
 from torchbenchmark.util.backends.torch_trt import enable_torchtrt
+from torchbenchmark.util.backends.onnx2trt import enable_onnx2trt
 from torchbenchmark.util.env_check import correctness_check
 from torchbenchmark.util.framework.vision.args import enable_fp16
 
@@ -21,9 +23,9 @@ def allow_fp16(model: 'torchbenchmark.util.model.BenchmarkModel') -> bool:
 # Dispatch arguments based on model type
 def parse_args(model: 'torchbenchmark.util.model.BenchmarkModel', extra_args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fx2trt", action='store_true', help="enable fx2trt")
+    parser.add_argument("--tensorrt", choices=['fx2trt', 'torch_tensorrt', 'torch2trt', 'onnx2trt'],
+                        help="enable TensorRT with one of the lowering libraries: fx2trt, torch_tensorrt, torch2trt, onnx2trt")
     parser.add_argument("--fuser", type=str, default="", help="enable fuser")
-    parser.add_argument("--torch_trt", action='store_true', help="enable torch_tensorrt")
     # TODO: Enable fp16 for all model inference tests
     # fp16 is only True for torchvision models running CUDA inference tests
     # otherwise, it is False
@@ -41,7 +43,7 @@ def parse_args(model: 'torchbenchmark.util.model.BenchmarkModel', extra_args: Li
     if not allow_fp16(model) and args.fp16:
         raise NotImplementedError("fp16 is only implemented for torchvision models inference tests on CUDA.")
     if not (model.device == "cuda" and model.test == "eval"):
-        if args.fx2trt or args.torch_trt:
+        if args.tensorrt:
             raise NotImplementedError("TensorRT only works for CUDA inference tests.")
     if hasattr(model, 'TORCHVISION_MODEL') and model.TORCHVISION_MODEL:
         args.cudagraph = False
@@ -53,21 +55,21 @@ def apply_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argparse
     if args.fp16:
         assert allow_fp16(model), "Eval fp16 is only available on CUDA for torchvison models."
         model.model, model.example_inputs = enable_fp16(model.model, model.example_inputs)
-    if args.fx2trt:
-        if args.jit:
-            raise NotImplementedError("fx2trt with JIT is not available.")
+    if args.tensorrt:
         module, exmaple_inputs = model.get_module()
         # get the output tensor of eval
         model.eager_output = model.eval()
-        model.set_module(enable_fx2trt(args.batch_size, fp16=args.fp16, model=module, example_inputs=exmaple_inputs))
-        model.output = model.eval()
-        model.correctness = correctness_check(model.eager_output, model.output)
-    if args.torch_trt:
-        module, exmaple_inputs = model.get_module()
-        precision = 'fp16' if args.fp16 else 'fp32'
-        # get the output tensor of eval
-        model.eager_output = model.eval()
-        model.set_module(enable_torchtrt(precision=precision, model=module, example_inputs=exmaple_inputs))
+        if args.tensorrt == "fx2trt":
+            if args.jit:
+                raise NotImplementedError("fx2trt with JIT is not available.")
+            model.set_module(enable_fx2trt(args.batch_size, fp16=args.fp16, model=module, example_inputs=exmaple_inputs))
+        if args.tensorrt == "torch_tensorrt":
+            precision = 'fp16' if args.fp16 else 'fp32'
+            model.set_module(enable_torchtrt(precision=precision, model=module, example_inputs=exmaple_inputs))
+        if args.tensorrt == "torch2trt":
+            model.set_module(enable_torch2trt(model=module, example_inputs=exmaple_inputs, batch_size=model.batch_size))
+        if args.tensorrt == "onnx2trt":
+            model.set_module(enable_onnx2trt(model=module))
         model.output = model.eval()
         model.correctness = correctness_check(model.eager_output, model.output)
 
