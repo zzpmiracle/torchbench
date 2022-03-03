@@ -156,7 +156,6 @@ if __name__ == "__main__":
     parser.add_argument("--cudastreams", action="store_true",
                         help="Utilization test using increasing number of cuda streams.")
     parser.add_argument("--bs", type=int, help="Specify batch size to the test.")
-    parser.add_argument("--flops", action="store_true", help="Return the flops result")
     args, extra_args = parser.parse_known_args()
 
     if args.cudastreams and not args.device == "cuda":
@@ -170,17 +169,12 @@ if __name__ == "__main__":
         exit(-1)
     print(f"Running {args.test} method from {Model.name} on {args.device} in {args.mode} mode.")
 
-    # build the model and get the chosen test method
-    if args.flops:
-        extra_args.append("--flops")
-
     m = Model(device=args.device, test=args.test, jit=(args.mode == "jit"), batch_size=args.bs, extra_args=extra_args)
 
     test = getattr(m, args.test)
     model_flops = None
-    if args.flops:
-        assert hasattr(m, "get_flops"), f"The model {args.model} does not support calculating flops."
-        model_flops = m.get_flops(test=args.test)
+    if hasattr(m, 'flops') and not m.flops == None:
+        model_flops = (m.flops, m.batch_size)
     if args.profile:
         profile_one_step(test)
     elif args.cudastreams:

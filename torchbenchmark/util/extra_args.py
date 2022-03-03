@@ -4,6 +4,7 @@ from torchbenchmark.util.backends.fx2trt import enable_fx2trt
 from torchbenchmark.util.backends.fuser import enable_fuser
 from torchbenchmark.util.backends.jit import enable_jit
 from torchbenchmark.util.backends.torch_trt import enable_torchtrt
+from torchbenchmark.util.backends.flops import get_flops, SUPPORTED_FLOPS_COUNTER
 from torchbenchmark.util.env_check import correctness_check
 from torchbenchmark.util.framework.vision.args import enable_fp16
 
@@ -25,6 +26,7 @@ def parse_args(model: 'torchbenchmark.util.model.BenchmarkModel', extra_args: Li
     parser.add_argument("--fx2trt", action='store_true', help="enable fx2trt")
     parser.add_argument("--fuser", type=str, default="", help="enable fuser")
     parser.add_argument("--torch_trt", action='store_true', help="enable torch_tensorrt")
+    parser.add_argument("--flops", choices=SUPPORTED_FLOPS_COUNTER.keys(), default=None, help="count the flops")
     # TODO: Enable fp16 for all model inference tests
     # fp16 is only True for torchvision models running CUDA inference tests
     # otherwise, it is False
@@ -49,6 +51,8 @@ def parse_args(model: 'torchbenchmark.util.model.BenchmarkModel', extra_args: Li
     return args
 
 def apply_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argparse.Namespace):
+    if args.flops:
+        model.flops = get_flops(args.flops, model)
     if args.fuser:
         enable_fuser(args.fuser)
     if args.fp16:
