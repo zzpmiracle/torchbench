@@ -1,0 +1,1 @@
+[{"name": "detectron2_maskrcnn_r_50_c4", "test": "eval", "device": "cuda", "extra_args": [], "status": "OK", "batch_size": 2, "precision": "fp16", "results": {"latency_ms": 1023.071726}}]

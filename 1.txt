@@ -1,0 +1,3 @@
+Running train method from resnet50 on cuda in eager mode.
+GPU Time:            149.508 milliseconds
+CPU Total Wall Time: 149.537 milliseconds

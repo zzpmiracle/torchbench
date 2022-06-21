@@ -115,6 +115,7 @@ def apply_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argp
         import torch
         model.add_context(lambda: torch.jit.fuser(args.fuser))
     if args.jit:
+        print("XU: model is using torchscript")
         # model can handle jit code themselves through the 'jit_callback' callback function
         if hasattr(model, 'jit_callback'):
             model.jit_callback()
@@ -122,6 +123,8 @@ def apply_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argp
             # if model doesn't have customized jit code, use the default jit script code
             module, exmaple_inputs = model.get_module()
             model.set_module(enable_jit(model=module, example_inputs=exmaple_inputs, test=model.test))
+    else:
+        print("XU: model is not using torchscript")
     if args.fx2trt:
         if args.jit:
             raise NotImplementedError("fx2trt with JIT is not available.")
