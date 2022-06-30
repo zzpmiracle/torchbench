@@ -36,6 +36,8 @@ from .config import FAMBenchTrainConfig, FAMBenchEvalConfig, cfg_to_str
 from .args import parse_fambench_args, validate_fambench_args
 from .lrscheduler import LRPolicyScheduler
 from .utils import unpack_batch, loss_fn_wrap, dlrm_wrap, prefetch
+torch.jit.script = None
+torch.jit.trace = None
 
 class Model(BenchmarkModel):
     task = RECOMMENDATION.RECOMMENDATION
@@ -48,6 +50,8 @@ class Model(BenchmarkModel):
 
     def __init__(self, test, device, jit=False, batch_size=None, extra_args=[]):
         super().__init__(test, device, batch_size, jit, extra_args)
+        torch.jit.script = None
+        torch.jit.trace = None
         if test == "train":
             self.fambench_args = parse_fambench_args(cfg_to_str(self.DEFAULT_TRAIN_ARGS))
             self.fambench_args.inference_only = False
