@@ -61,7 +61,7 @@ class FAMBenchEvalConfig:
     numpy_rand_seed:int = 727
     weighted_pooling: str = "fixed"
     # original number of batches: 15
-    num_batches:int = 15
+    num_batches:int = 2
     # torchbench: these items in the original config are disabled
     # because they either handled by the framework
     # or requires extra dependencies that we don't support yet (such as fbgemm and torch2trt_for_mlp)
