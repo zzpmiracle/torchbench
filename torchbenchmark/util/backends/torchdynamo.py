@@ -6,6 +6,7 @@ import functools
 from typing import List
 import torchdynamo
 from torchdynamo.optimizations.training import aot_autograd_speedup_strategy
+from .blade import blade_optimize_dynamo
 
 EXTRA_BACKENDS = {
     "aot_autograd_speedup_strategy": aot_autograd_speedup_strategy,

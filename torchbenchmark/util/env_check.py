@@ -4,6 +4,7 @@ This file may be loaded without torch packages installed, e.g., in OnDemand CI.
 """
 import importlib
 import copy
+import os
 from typing import List, Dict, Tuple, Optional
 
 MAIN_RANDOM_SEED = 1337
@@ -77,7 +78,8 @@ def correctness_check(model: 'torchbenchmark.util.model.BenchmarkModel', cos_sim
             # if the model is not copy-able, don't copy it
             copy_model = model
         cur_result = copy_model.invoke()
-        if not same(model.eager_output, cur_result, cos_similarity=cos_sim):
+        tol = float(os.environ.get("TORCHBENCH_TOL", "1e-4"))
+        if not same(model.eager_output, cur_result, cos_similarity=cos_sim, tol=tol):
             return False
         del cur_result
     return True

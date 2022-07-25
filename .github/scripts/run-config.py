@@ -27,6 +27,7 @@ class BenchmarkModelConfig:
     device: str
     test: str
     batch_size: Optional[int]
+    precision: Optional[str]
     args: List[str]
     rewritten_option: str
 
@@ -54,8 +55,13 @@ def get_models(config) -> Optional[str]:
     assert enabled_models, f"The model patterns you specified {config['models']} does not match any model. Please double check."
     return enabled_models
 
-def get_subrun_key(device, test, batch_size=None):
-    return f"{test}-{device}-bsize_{batch_size}" if batch_size else f"{test}-{device}"
+def get_subrun_key(device, test, batch_size=None, precision=None):
+    key = f"{test}-{device}"
+    if batch_size:
+        key += f"-bsize_{batch_size}"
+    if precision:
+        key += f"-{precision}"
+    return key
 
 def get_tests(config):
     if not "test" in config:
@@ -72,6 +78,11 @@ def get_batch_sizes(config):
         return [None]
     return config["batch_size"]
 
+def get_precisions(config):
+    if not "precision" in config:
+        return [""]
+    return config["precision"]
+
 def parse_bmconfigs(repo_path: Path, config_name: str) -> List[BenchmarkModelConfig]:
     if not config_name.endswith(".yaml"):
         config_name += ".yaml"
@@ -86,14 +97,15 @@ def parse_bmconfigs(repo_path: Path, config_name: str) -> List[BenchmarkModelCon
     devices = get_devices(config)
     tests = get_tests(config)
     batch_sizes = get_batch_sizes(config)
+    precisions = get_precisions(config)
 
-    bm_matrix = [devices, tests, batch_sizes]
-    for device, test, batch_size in itertools.product(*bm_matrix):
-        subrun = (device, test, batch_size) if batch_size else (device, test)
+    bm_matrix = [devices, tests, batch_sizes, precisions]
+    for device, test, batch_size, precision in itertools.product(*bm_matrix):
+        subrun = (device, test, batch_size, precision)
         out[subrun] = []
         for args in config["args"]:
             out[subrun].append(BenchmarkModelConfig(models=models, device=device, test=test, \
-                               batch_size=batch_size, args=args.split(" "), \
+                               batch_size=batch_size, precision=precision, args=args.split(" "), \
                                rewritten_option=rewrite_option(args.split(" "))))
     return out
 
@@ -105,6 +117,9 @@ def run_bmconfig(config: BenchmarkModelConfig, repo_path: Path, output_path: Pat
     if config.models:
         cmd.append("-m")
         cmd.extend(config.models)
+    if config.precision:
+        cmd.append("--precision")
+        cmd.append(config.precision)
     if config.args != ['']:
         cmd.extend(config.args)
     output_dir = output_path.joinpath("json")

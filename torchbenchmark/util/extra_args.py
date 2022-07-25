@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 from torchbenchmark.util.backends.fx2trt import enable_fx2trt
 from torchbenchmark.util.backends.jit import enable_jit
 from torchbenchmark.util.backends.torch_trt import enable_torchtrt
+from torchbenchmark.util.backends.blade import blade_optimize_script
 
 def check_correctness_p(model: 'torchbenchmark.util.model.BenchmarkModel', opt_args: argparse.Namespace) -> bool:
     "If correctness check should be enabled."
@@ -107,6 +108,7 @@ def parse_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', opt_args: 
     parser.add_argument("--fx2trt", action='store_true', help="enable fx2trt")
     parser.add_argument("--fuser", type=str, default="", choices=["fuser0", "fuser1", "fuser2"], help="enable fuser")
     parser.add_argument("--torch_trt", action='store_true', help="enable torch_tensorrt")
+    parser.add_argument("--blade", action='store_true', help="enable blade optimize")
     parser.add_argument("--flops", choices=["model", "dcgm"], help="Return the flops result")
     args = parser.parse_args(opt_args)
     args.jit = model.jit
@@ -142,3 +144,6 @@ def apply_opt_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argp
         module, exmaple_inputs = model.get_module()
         precision = 'fp16' if not model.dargs.precision == "fp32" else 'fp32'
         model.set_module(enable_torchtrt(precision=precision, model=module, example_inputs=exmaple_inputs))
+    if args.blade:
+        module, exmaple_inputs = model.get_module()
+        model.set_module(blade_optimize_script(module, exmaple_inputs))
