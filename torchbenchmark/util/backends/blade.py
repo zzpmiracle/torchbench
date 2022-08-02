@@ -23,6 +23,8 @@ def blade_optimize_dynamo(subgraph):
             model_inputs=tuple(subgraph.example_inputs),
         )
 
+    # print(f"\nsubgraph clusters: {torch_blade.mlir.num_engines(optimized_model)}")
+    
     # with open(f'model.code.py', 'a') as writer:
     #     writer.write(str(optimized_model.code))
     # with open(f'model.graph.txt', 'a') as writer:
@@ -37,4 +39,5 @@ def blade_optimize_script(model: torch.nn.Module, example_inputs: Tuple[torch.Te
             allow_tracing=True,
             model_inputs=tuple(example_inputs),
         )
+    # print(f"\nblade clusters: {torch_blade.mlir.num_engines(optimized_model)}")
     return optimized_model

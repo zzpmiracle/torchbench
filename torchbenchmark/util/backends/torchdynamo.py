@@ -24,6 +24,7 @@ def parse_torchdynamo_args(model: 'torchbenchmark.util.model.BenchmarkModel', dy
 
 
 def apply_torchdynamo_args(model: 'torchbenchmark.util.model.BenchmarkModel', args: argparse.Namespace, precision: str):
+    torchdynamo.config.raise_on_backend_error = False
     if args.torchdynamo in EXTRA_BACKENDS:
         model.add_context(functools.partial(torchdynamo.optimize, EXTRA_BACKENDS[args.torchdynamo]))
     elif args.torchdynamo == "fx2trt" and precision == "fp16":

@@ -15,6 +15,7 @@ from urllib import request
 
 from components._impl.tasks import base as base_task
 from components._impl.workers import subprocess_worker
+from components._impl.workers import in_process_worker
 
 REPO_PATH = Path(os.path.abspath(__file__)).parent.parent
 DATA_PATH = os.path.join(REPO_PATH, "torchbenchmark", "data", ".data")
@@ -175,8 +176,10 @@ class ModelDetails:
     def name(self) -> str:
         return os.path.basename(self.path)
 
-
+# used by zp
 class Worker(subprocess_worker.SubprocessWorker):
+# class Worker(in_process_worker.InProcessWorker):
+
     """Run subprocess using taskset if CPU affinity is set.
 
     When GOMP_CPU_AFFINITY is set, importing `torch` in the main process has
@@ -214,7 +217,10 @@ class ModelTask(base_task.TaskBase):
         assert self._lock.acquire(blocking=False), "Failed to acquire lock."
 
         self._model_path = model_path
+        # used by zp
         self._worker = Worker(timeout=timeout)
+        # self._worker = Worker(globals={})
+
         self.worker.run("import torch")
 
         self._details: ModelDetails = ModelDetails(
@@ -228,7 +234,10 @@ class ModelTask(base_task.TaskBase):
         self._lock.release()
 
     @property
+    # used by zp
     def worker(self) -> subprocess_worker.SubprocessWorker:
+    # def worker(self) -> in_process_worker.InProcessWorker:
+
         return self._worker
 
     @property

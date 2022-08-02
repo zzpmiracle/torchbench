@@ -4,6 +4,7 @@ If unspecified, run a sweep of all models.
 """
 import argparse
 import json
+from operator import sub
 import os
 import sys
 import numpy
@@ -89,6 +90,8 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
     status: str = "OK"
     bs_name = "batch_size"
     correctness_name = "correctness"
+    subgraphs_name = "subgraphs"
+    clusters_name = "clusters"
     error_message: Optional[str] = None
     try:
         task = ModelTask(os.path.basename(model_path), timeout=WORKER_TIMEOUT)
@@ -106,10 +109,18 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
         num_batches = task.get_model_attribute("NUM_BATCHES")
         if num_batches:
             result.results["latency_ms"] = result.results["latency_ms"] / num_batches
+        result.results["latency_ms"] = round(result.results["latency_ms"], 3)
         # if the model provides eager eval result, save it for cosine similarity
         correctness = task.get_model_attribute(correctness_name)
         if correctness is not None:
             result.results[correctness_name] = str(correctness)
+        clusters = task.get_model_attribute(clusters_name)
+        subgraphs = task.get_model_attribute(subgraphs_name)
+        if clusters is not None:
+            result.results[clusters_name] = str(clusters)
+        if subgraphs is not None:
+            result.results[subgraphs_name] = str(subgraphs)
+
     except NotImplementedError as e:
         status = "NotImplemented"
         error_message = str(e)

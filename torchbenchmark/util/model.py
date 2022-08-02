@@ -101,6 +101,9 @@ class BenchmarkModel(metaclass=PostInitProcessor):
             apply_torchdynamo_args(self, self.opt_args, self.dargs.precision)
         else:
             apply_opt_args(self, self.opt_args)
+            if self.opt_args.blade:
+                import torch_blade
+                self.clusters = torch_blade.mlir.num_engines(self.model)
         if should_check_correctness:
             # tensorrt or fp16 is known to generate less-accurate results
             # in this case, use more relaxed cosine similarity instead of torch.allclose
@@ -110,6 +113,7 @@ class BenchmarkModel(metaclass=PostInitProcessor):
                 self.correctness = correctness_check(self, cos_sim=True, deepcopy=self.DEEPCOPY)
             else:
                 self.correctness = correctness_check(self, cos_sim=False, deepcopy=self.DEEPCOPY)
+
         # setup distributed trainer
         if self.dargs.distributed:
             from torchbenchmark.util.distributed.core_model.apply_trainer import apply_trainer
