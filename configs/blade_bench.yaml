@@ -25,6 +25,6 @@ args:
 
   # torchdynamo based
   - "--torchdynamo eager"
-  - "--torchdynamo nvfuser"
+  # - "--torchdynamo nvfuser"
   - "--torchdynamo blade_optimize_dynamo"
-  - "--torchdynamo cudagraphs"
+  # - "--torchdynamo cudagraphs"

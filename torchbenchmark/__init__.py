@@ -177,8 +177,8 @@ class ModelDetails:
         return os.path.basename(self.path)
 
 # used by zp
-# class Worker(subprocess_worker.SubprocessWorker):
-class Worker(in_process_worker.InProcessWorker):
+class Worker(subprocess_worker.SubprocessWorker):
+# class Worker(in_process_worker.InProcessWorker):
 
     """Run subprocess using taskset if CPU affinity is set.
 
@@ -218,8 +218,8 @@ class ModelTask(base_task.TaskBase):
 
         self._model_path = model_path
         # used by zp
-        # self._worker = Worker(timeout=timeout)
-        self._worker = Worker(globals={})
+        self._worker = Worker(timeout=timeout)
+        # self._worker = Worker(globals={})
 
         self.worker.run("import torch")
 
@@ -235,8 +235,8 @@ class ModelTask(base_task.TaskBase):
 
     @property
     # used by zp
-    # def worker(self) -> subprocess_worker.SubprocessWorker:
-    def worker(self) -> in_process_worker.InProcessWorker:
+    def worker(self) -> subprocess_worker.SubprocessWorker:
+    # def worker(self) -> in_process_worker.InProcessWorker:
 
         return self._worker
 

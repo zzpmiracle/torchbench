@@ -154,7 +154,7 @@ if __name__ == "__main__":
         assert len(bmconfigs), f"Size of subrun {subrun} must be larger than zero."
         subrun_path = output_path.joinpath(subrun_key)
         subrun_path.mkdir(exist_ok=True, parents=True)
-        for bm in bmconfigs:
-            run_bmconfig(bm, repo_path, subrun_path, args.dryrun)
+        # for bm in bmconfigs:
+        #     run_bmconfig(bm, repo_path, subrun_path, args.dryrun)
         if not args.dryrun:
             gen_output_csv(subrun_path, base_key=bmconfigs[0].rewritten_option)

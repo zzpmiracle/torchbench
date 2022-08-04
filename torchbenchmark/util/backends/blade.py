@@ -1,5 +1,6 @@
 from builtins import breakpoint
 from charset_normalizer import logging
+import torchdynamo
 from torchdynamo.optimizations.backends import create_backend
 import torch
 import torch_blade
@@ -26,7 +27,11 @@ def blade_optimize_dynamo(subgraph):
             model_inputs=tuple(subgraph.example_inputs),
         )
     if torch_blade.mlir.num_engines(optimized_model) == 0:
-        logging.warning("blade no optimization, use original model")
+        logging.warning("blade none fusion group")
+
+    if not torchdynamo.utils.counters["blade_clusters"]:
+        torchdynamo.utils.counters["blade_clusters"] = []
+    torchdynamo.utils.counters["blade_clusters"].append(torch_blade.mlir.num_engines(optimized_model))
         # return subgraph.model
 
     # print(f"\nsubgraph clusters: {torch_blade.mlir.num_engines(optimized_model)}")

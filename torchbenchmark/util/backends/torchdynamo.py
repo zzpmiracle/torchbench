@@ -39,7 +39,5 @@ def apply_torchdynamo_args(model: 'torchbenchmark.util.model.BenchmarkModel', ar
     
     for _ in range(TORCHDYNAMO_ROUNDS):
         model.invoke()
-        print(torchdynamo.utils.counters["stats"]["unique_graphs"])
     model.run_contexts.pop()
     model.add_context(torchdynamo.run)
-    print(model.run_contexts)
