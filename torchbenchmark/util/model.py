@@ -1,3 +1,4 @@
+from builtins import breakpoint
 import os
 import torch
 from contextlib import contextmanager, ExitStack
@@ -97,8 +98,12 @@ class BenchmarkModel(metaclass=PostInitProcessor):
         apply_decoration_args(self, self.dargs)
         # apply optimization args
         if self.dynamo:
+            import torchdynamo
             from torchbenchmark.util.backends.torchdynamo import apply_torchdynamo_args
             apply_torchdynamo_args(self, self.opt_args, self.dargs.precision)
+            # if self.opt_args.torchdynamo == "blade_optimize_dynamo":
+                # breakpoint()
+            self.subgraphs = torchdynamo.utils.counters["stats"]["unique_graphs"]
         else:
             apply_opt_args(self, self.opt_args)
             if self.opt_args.blade:
@@ -146,6 +151,7 @@ class BenchmarkModel(metaclass=PostInitProcessor):
             if self.test == "train":
                 self.train()
             elif self.test == "eval":
+                # breakpoint()
                 out = self.eval()
         return out
 

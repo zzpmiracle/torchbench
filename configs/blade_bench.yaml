@@ -10,6 +10,8 @@ test:
 models:
   - "alexnet"
   - "attention_is_all_you_need_pytorch"
+  - "timm_efficientnet"
+  - "hf_Bert"
 precision:
   # - "fp16"
   - "fp32"
@@ -19,8 +21,10 @@ args:
 
   # script based
   - "--blade"
-  # - "--fuser fuser2 --jit"
+  # - "--fuser fuser2 --jit"  # nvfuser
 
   # torchdynamo based
-  # - "--torchdynamo nvfuser"
+  - "--torchdynamo eager"
+  - "--torchdynamo nvfuser"
   - "--torchdynamo blade_optimize_dynamo"
+  - "--torchdynamo cudagraphs"

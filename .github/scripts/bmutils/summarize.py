@@ -83,7 +83,7 @@ def find_result_by_header(r, header, base_arg):
             return "N/A"
     elif tp == "latency":
         if is_ok(r[args]):
-            return r[args]["results"]["latency_ms"]
+            return round(r[args]["results"]["latency_ms"], 3)
         else:
             return r[args]["status"]
     elif tp == "speedup":
@@ -94,6 +94,11 @@ def find_result_by_header(r, header, base_arg):
     elif tp == "clusters":
         if is_ok(r[args]):
             return r[args]["results"]["clusters"]
+        else:
+            return "N/A"
+    elif tp == "subgraphs":
+        if is_ok(r[args]):
+            return r[args]["results"]["subgraphs"]
         else:
             return "N/A"
     else:

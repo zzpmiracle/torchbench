@@ -17,6 +17,7 @@ import itertools
 import torch
 from typing import List, Optional, Dict, Any, Tuple
 from torchbenchmark import ModelTask
+import torchdynamo
 
 WARMUP_ROUNDS = 3
 WORKER_TIMEOUT = 600 # seconds
@@ -25,10 +26,13 @@ NANOSECONDS_PER_MILLISECONDS = 1_000_000.0
 
 def run_one_step(func, device: str, nwarmup=WARMUP_ROUNDS, num_iter=10) -> Tuple[float, Optional[Tuple[torch.Tensor]]]:
     "Run one step of the model, and return the latency in milliseconds."
+    # if torchdynamo.utils.counters["stats"]["unique_graphs"] != 1:
+    #     print(f'\n more than 1 subgraphs, get {torchdynamo.utils.counters["stats"]["unique_graphs"]}\n')
     # Warm-up `nwarmup` rounds
     for _i in range(nwarmup):
         func()
     result_summary = []
+    # print("after warmup")
     for _i in range(num_iter):
         if device == "cuda":
             torch.cuda.synchronize()
@@ -82,6 +86,8 @@ def _validate_devices(devices: str) -> List[str]:
     return devices_list
 
 def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool, batch_size: Optional[int], extra_args: List[str]) -> ModelTestResult:
+    # torchdynamo.config.debug = True
+    # torchdynamo.config.cache_size_limit = 1
     assert test == "train" or test == "eval", f"Test must be either 'train' or 'eval', but get {test}."
     result = ModelTestResult(name=model_path.name, test=test, device=device, extra_args=extra_args, batch_size=None, precision="fp32",
                              status="OK", results={})
@@ -109,7 +115,6 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
         num_batches = task.get_model_attribute("NUM_BATCHES")
         if num_batches:
             result.results["latency_ms"] = result.results["latency_ms"] / num_batches
-        result.results["latency_ms"] = round(result.results["latency_ms"], 3)
         # if the model provides eager eval result, save it for cosine similarity
         correctness = task.get_model_attribute(correctness_name)
         if correctness is not None:
