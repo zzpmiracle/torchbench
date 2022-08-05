@@ -20,6 +20,7 @@ REPO_DIR = str(Path(__file__).parent.parent.parent.resolve())
 
 with add_path(REPO_DIR):
     from torchbenchmark import _list_model_paths
+    from torchbenchmark import list_models
 
 @dataclass
 class BenchmarkModelConfig:
@@ -130,6 +131,53 @@ def run_bmconfig(config: BenchmarkModelConfig, repo_path: Path, output_path: Pat
         return
     subprocess.check_call(cmd, cwd=repo_path)
 
+def run_bmconfig_profiling(config: BenchmarkModelConfig, repo_path: Path, output_path: Path, dryrun=False):
+    nsys_path = "/opt/nvidia/nsight-systems/2022.2.1/bin/nsys"
+    profiling_cmd = [nsys_path, "profile", "-o", "", "-f", "true", "-c", "cudaProfilerApi", sys.executable, "run_sweep.py", "-d", config.device, "-t", config.test, "--is-profiling"]
+    stats_cmd = [nsys_path, "stats", "--report", "gputrace", "-f", "csv", "-o"]
+    
+    if config.batch_size:
+        profiling_cmd.append("-b")
+        profiling_cmd.append(str(config.batch_size))
+
+    if config.precision:
+        profiling_cmd.append("--precision")
+        profiling_cmd.append(config.precision)
+    if config.args != ['']:
+        profiling_cmd.extend(config.args)
+    output_dir = output_path.joinpath("profiling")
+    output_dir.mkdir(exist_ok=True, parents=True)
+    models = config.models or [os.path.basename(model_path) for model_path in _list_model_paths()]
+    print(models)
+    profiling_cmd.append("-m")
+    for model in models:
+        
+        model_profiling_dir = output_dir.joinpath(model).absolute()
+        model_profiling_dir.mkdir(exist_ok=True, parents=True)
+        model_prefix = os.path.join(model_profiling_dir, f"{config.rewritten_option}")
+
+        profiling_cmd[3] = model_prefix
+        profiling_cmd.append(model)
+
+        stats_cmd.append(model_prefix)
+        stats_cmd.append(model_prefix + ".nsys-rep")
+        parse_cmd = [sys.executable, "parse_nsys_result.py", model_prefix + "_gputrace.csv"]
+
+        try:
+            print(f"Now profiling benchmark command: {profiling_cmd}.", flush=True)
+            subprocess.run(profiling_cmd, cwd=repo_path)
+            print(f"Now stats benchmark command: {stats_cmd}.", flush=True)
+            subprocess.check_call(stats_cmd, cwd=repo_path)
+            print(f"Now parse benchmark command: {parse_cmd}.", flush=True)
+            with open(model_prefix + ".log", "w") as fd:
+                subprocess.check_call(parse_cmd, cwd=repo_path, stdout=fd)
+        except subprocess.CalledProcessError:
+            pass
+
+        profiling_cmd.pop()
+        stats_cmd = stats_cmd[:-2]
+ 
+
 def gen_output_csv(output_path: Path, base_key: str):
     result = analyze_result(output_path.joinpath("json").absolute(), base_key=base_key)
     with open(output_path.joinpath("summary.csv"), "w") as sw:
@@ -154,7 +202,8 @@ if __name__ == "__main__":
         assert len(bmconfigs), f"Size of subrun {subrun} must be larger than zero."
         subrun_path = output_path.joinpath(subrun_key)
         subrun_path.mkdir(exist_ok=True, parents=True)
-        # for bm in bmconfigs:
-        #     run_bmconfig(bm, repo_path, subrun_path, args.dryrun)
+        for bm in bmconfigs:
+            run_bmconfig(bm, repo_path, subrun_path, args.dryrun)
+            run_bmconfig_profiling(bm, repo_path, subrun_path, args.dryrun)
         if not args.dryrun:
             gen_output_csv(subrun_path, base_key=bmconfigs[0].rewritten_option)

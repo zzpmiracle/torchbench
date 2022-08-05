@@ -3,8 +3,9 @@ Run a config of benchmarking with a list of models.
 If unspecified, run a sweep of all models.
 """
 import argparse
+from builtins import breakpoint
 import json
-from operator import sub
+from operator import is_, sub
 import os
 import sys
 import numpy
@@ -24,7 +25,24 @@ WORKER_TIMEOUT = 600 # seconds
 MODEL_DIR = ['torchbenchmark', 'models']
 NANOSECONDS_PER_MILLISECONDS = 1_000_000.0
 
-def run_one_step(func, device: str, nwarmup=WARMUP_ROUNDS, num_iter=10) -> Tuple[float, Optional[Tuple[torch.Tensor]]]:
+import ctypes
+
+_cudart = ctypes.CDLL('libcudart.so')
+
+def cu_prof_start():
+    ret = _cudart.cudaProfilerStart()
+    #print("cu_prof_start")
+    if ret != 0:
+        raise Exception('cudaProfilerStart() returned %d' % ret)
+
+
+def cu_prof_stop():
+    ret = _cudart.cudaProfilerStop()
+    #print("cu_prof_stop")
+    if ret != 0:
+        raise Exception('cudaProfilerStop() returned %d' % ret)
+        
+def run_one_step(func, device: str, nwarmup=WARMUP_ROUNDS, num_iter=10, is_profiling=False) -> Tuple[float, Optional[Tuple[torch.Tensor]]]:
     "Run one step of the model, and return the latency in milliseconds."
     # if torchdynamo.utils.counters["stats"]["unique_graphs"] != 1:
     #     print(f'\n more than 1 subgraphs, get {torchdynamo.utils.counters["stats"]["unique_graphs"]}\n')
@@ -33,15 +51,22 @@ def run_one_step(func, device: str, nwarmup=WARMUP_ROUNDS, num_iter=10) -> Tuple
         func()
     result_summary = []
     # print("after warmup")
+    if is_profiling:
+        num_iter = 1
     for _i in range(num_iter):
         if device == "cuda":
             torch.cuda.synchronize()
             # Collect time_ns() instead of time() which does not provide better precision than 1
             # second according to https://docs.python.org/3/library/time.html#time.time.
             t0 = time.time_ns()
+            # if is_profiling:
+            cu_prof_start()
             func()
             torch.cuda.synchronize()  # Wait for the events to be recorded!
+            # if is_profiling:
+            cu_prof_stop()
             t1 = time.time_ns()
+            # print((t1 - t0) / NANOSECONDS_PER_MILLISECONDS)
         else:
             t0 = time.time_ns()
             func()
@@ -85,7 +110,7 @@ def _validate_devices(devices: str) -> List[str]:
             raise ValueError(f'Invalid device {d} passed into --devices. Expected devices: {valid_devices}.')
     return devices_list
 
-def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool, batch_size: Optional[int], extra_args: List[str]) -> ModelTestResult:
+def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool, batch_size: Optional[int], extra_args: List[str], is_profiling: bool=False) -> ModelTestResult:
     # torchdynamo.config.debug = True
     # torchdynamo.config.cache_size_limit = 1
     assert test == "train" or test == "eval", f"Test must be either 'train' or 'eval', but get {test}."
@@ -110,7 +135,7 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
         result.precision = task.get_model_attribute("dargs", "precision")
         if batch_size and (not result.batch_size == batch_size):
             raise ValueError(f"User specify batch size {batch_size}, but model {result.name} runs with batch size {result.batch_size}. Please report a bug.")
-        result.results["latency_ms"] = run_one_step(task.invoke, device)
+        result.results["latency_ms"] = run_one_step(task.invoke, device, is_profiling=is_profiling)
         # if NUM_BATCHES is set, update to per-batch latencies
         num_batches = task.get_model_attribute("NUM_BATCHES")
         if num_batches:
@@ -157,6 +182,7 @@ if __name__ == "__main__":
     parser.add_argument("--jit", action='store_true', help="Turn on torchscript.")
     parser.add_argument("-o", "--output", type=str, default="tb-output.json", help="The default output json file.")
     parser.add_argument("--proper-bs", action='store_true', help="Find the best batch_size for current devices.")
+    parser.add_argument("--is-profiling", action='store_true', help="profiling use")
     args, extra_args = parser.parse_known_args()
     args.models = _list_model_paths(args.models)
     results = []
@@ -169,7 +195,7 @@ if __name__ == "__main__":
             from scripts.proper_bs import _run_model_test_proper_bs
             r = _run_model_test_proper_bs(model_path, test, device, args.jit, batch_size=args.bs, extra_args=extra_args)
         else:
-            r = _run_model_test(model_path, test, device, args.jit, batch_size=args.bs, extra_args=extra_args)
+            r = _run_model_test(model_path, test, device, args.jit, batch_size=args.bs, extra_args=extra_args, is_profiling=args.is_profiling)
         results.append(r)
         results_to_export = list(map(lambda x: dataclasses.asdict(x), results))
         parent_dir = pathlib.Path(args.output).parent
