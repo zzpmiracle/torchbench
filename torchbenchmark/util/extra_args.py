@@ -44,7 +44,7 @@ def get_hf_maxlength(model: 'torchbenchmark.util.model.BenchmarkModel') -> Optio
 def check_precision(model: 'torchbenchmark.util.model.BenchmarkModel', precision: str) -> bool:
     if precision == "fp16":
         # we disable half precision train (non-amp) for now
-        return model.device == 'cuda' and model.test == 'eval' and hasattr(model, "enable_fp16_half")
+        return model.device == 'cuda' and model.test == 'eval'
     if precision == "amp":
         if model.test == 'eval' and model.device == 'cuda':
             return True
@@ -77,8 +77,7 @@ def parse_decoration_args(model: 'torchbenchmark.util.model.BenchmarkModel', ext
     parser.add_argument("--channels-last", action='store_true', help="enable channels-last memory layout")
     dargs, opt_args = parser.parse_known_args(extra_args)
     if not check_precision(model, dargs.precision):
-        raise NotImplementedError(f"precision value: {dargs.precision}, fp16 or amp precision is only supported on CUDA inference tests, "
-                                  f"fp16 is only supported if the model implements the `enable_fp16_half()` callback function.")
+        raise NotImplementedError(f"precision value: {dargs.precision}, fp16 or amp precision is only supported on CUDA inference tests")
     if not check_memory_layout(model, dargs.channels_last):
         raise NotImplementedError(f"Specified channels_last: {dargs.channels_last} ,"
                                   f" but the model doesn't implement the enable_channels_last() interface.")

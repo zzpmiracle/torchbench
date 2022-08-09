@@ -18,7 +18,6 @@ import itertools
 import torch
 from typing import List, Optional, Dict, Any, Tuple
 from torchbenchmark import ModelTask
-import torchdynamo
 
 WARMUP_ROUNDS = 3
 WORKER_TIMEOUT = 600 # seconds
@@ -123,7 +122,9 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
     correctness_name = "correctness"
     subgraphs_name = "subgraphs"
     clusters_name = "clusters"
+    compiled_nodes_name = "blade_compiled_nodes"
     error_message: Optional[str] = None
+    # if True:
     try:
         task = ModelTask(os.path.basename(model_path), timeout=WORKER_TIMEOUT)
         if not task.model_details.exists:
@@ -146,10 +147,13 @@ def _run_model_test(model_path: pathlib.Path, test: str, device: str, jit: bool,
             result.results[correctness_name] = str(correctness)
         clusters = task.get_model_attribute(clusters_name)
         subgraphs = task.get_model_attribute(subgraphs_name)
+        compiled_nodes = task.get_model_attribute(compiled_nodes_name)
         if clusters is not None:
             result.results[clusters_name] = str(clusters)
         if subgraphs is not None:
             result.results[subgraphs_name] = str(subgraphs)
+        if compiled_nodes is not None:
+            result.results[compiled_nodes_name] = sum(compiled_nodes)
 
     except NotImplementedError as e:
         status = "NotImplemented"

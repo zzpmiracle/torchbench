@@ -20,7 +20,6 @@ REPO_DIR = str(Path(__file__).parent.parent.parent.resolve())
 
 with add_path(REPO_DIR):
     from torchbenchmark import _list_model_paths
-    from torchbenchmark import list_models
 
 @dataclass
 class BenchmarkModelConfig:
@@ -148,7 +147,6 @@ def run_bmconfig_profiling(config: BenchmarkModelConfig, repo_path: Path, output
     output_dir = output_path.joinpath("profiling")
     output_dir.mkdir(exist_ok=True, parents=True)
     models = config.models or [os.path.basename(model_path) for model_path in _list_model_paths()]
-    print(models)
     profiling_cmd.append("-m")
     for model in models:
         
@@ -204,6 +202,8 @@ if __name__ == "__main__":
         subrun_path.mkdir(exist_ok=True, parents=True)
         for bm in bmconfigs:
             run_bmconfig(bm, repo_path, subrun_path, args.dryrun)
-            run_bmconfig_profiling(bm, repo_path, subrun_path, args.dryrun)
         if not args.dryrun:
             gen_output_csv(subrun_path, base_key=bmconfigs[0].rewritten_option)
+        
+        for bm in bmconfigs:
+            run_bmconfig_profiling(bm, repo_path, subrun_path, args.dryrun)
