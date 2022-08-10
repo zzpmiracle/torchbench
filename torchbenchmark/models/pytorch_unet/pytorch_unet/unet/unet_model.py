@@ -19,6 +19,7 @@ class UNet(nn.Module):
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
+        self.is_eval = False
 
         self.inc = DoubleConv(n_channels, 64)
         self.down1 = Down(64, 128)
@@ -43,4 +44,10 @@ class UNet(nn.Module):
         x = self.up3(x, x2)
         x = self.up4(x, x1)
         logits = self.outc(x)
+
+        if self.is_eval:
+            if self.n_classes == 1:
+                logits = (F.sigmoid(logits) > 0.5).float()
+            else:
+                logits = F.one_hot(logits.argmax(dim=1), self.n_classes).permute(0, 3, 1, 2).float()
         return logits
